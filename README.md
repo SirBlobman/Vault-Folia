@@ -1,6 +1,6 @@
 # Vault - Folia
 
-A custom fork of [Vault](/MilkBowl/Vault) that adds support for [Folia](/PaperMC/Folia).
+A custom fork of [Vault](https://github.com/MilkBowl/Vault) that adds support for [Folia](https://github.com/PaperMC/Folia).
 
 ## Dependencies
 
