@@ -23,6 +23,21 @@ import java.util.Collection;
 import java.util.concurrent.Callable;
 import java.util.logging.Logger;
 
+import org.bukkit.Bukkit;
+import org.bukkit.OfflinePlayer;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
+import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.plugin.Plugin;
+import org.bukkit.plugin.RegisteredServiceProvider;
+import org.bukkit.plugin.ServicePriority;
+import org.bukkit.plugin.ServicesManager;
+import org.bukkit.plugin.java.JavaPlugin;
+
 import net.milkbowl.vault.chat.Chat;
 import net.milkbowl.vault.chat.plugins.Chat_DroxPerms;
 import net.milkbowl.vault.chat.plugins.Chat_GroupManager;
@@ -30,6 +45,7 @@ import net.milkbowl.vault.chat.plugins.Chat_OverPermissions;
 import net.milkbowl.vault.chat.plugins.Chat_Permissions3;
 import net.milkbowl.vault.chat.plugins.Chat_PermissionsEx;
 import net.milkbowl.vault.chat.plugins.Chat_Privileges;
+import net.milkbowl.vault.chat.plugins.Chat_TotalPermissions;
 import net.milkbowl.vault.chat.plugins.Chat_bPermissions;
 import net.milkbowl.vault.chat.plugins.Chat_bPermissions2;
 import net.milkbowl.vault.chat.plugins.Chat_iChat;
@@ -40,6 +56,7 @@ import net.milkbowl.vault.economy.Economy;
 import net.milkbowl.vault.permission.Permission;
 import net.milkbowl.vault.permission.plugins.Permission_DroxPerms;
 import net.milkbowl.vault.permission.plugins.Permission_GroupManager;
+import net.milkbowl.vault.permission.plugins.Permission_KPerms;
 import net.milkbowl.vault.permission.plugins.Permission_OverPermissions;
 import net.milkbowl.vault.permission.plugins.Permission_Permissions3;
 import net.milkbowl.vault.permission.plugins.Permission_PermissionsBukkit;
@@ -48,35 +65,16 @@ import net.milkbowl.vault.permission.plugins.Permission_Privileges;
 import net.milkbowl.vault.permission.plugins.Permission_SimplyPerms;
 import net.milkbowl.vault.permission.plugins.Permission_Starburst;
 import net.milkbowl.vault.permission.plugins.Permission_SuperPerms;
+import net.milkbowl.vault.permission.plugins.Permission_TotalPermissions;
 import net.milkbowl.vault.permission.plugins.Permission_Xperms;
 import net.milkbowl.vault.permission.plugins.Permission_bPermissions;
 import net.milkbowl.vault.permission.plugins.Permission_bPermissions2;
-import net.milkbowl.vault.permission.plugins.Permission_TotalPermissions;
 import net.milkbowl.vault.permission.plugins.Permission_rscPermissions;
-import net.milkbowl.vault.permission.plugins.Permission_KPerms;
-
 import org.bstats.bukkit.Metrics;
 import org.bstats.charts.SimplePie;
-import org.bukkit.Bukkit;
-import org.bukkit.OfflinePlayer;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandSender;
-import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.EventPriority;
-import org.bukkit.event.Listener;
-import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.permissions.PermissionDefault;
-import org.bukkit.plugin.Plugin;
-import org.bukkit.plugin.RegisteredServiceProvider;
-import org.bukkit.plugin.ServicePriority;
-import org.bukkit.plugin.ServicesManager;
-import org.bukkit.plugin.java.JavaPlugin;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
-
-import net.milkbowl.vault.chat.plugins.Chat_TotalPermissions;
 
 public class Vault extends JavaPlugin {
 
@@ -94,7 +92,7 @@ public class Vault extends JavaPlugin {
     public void onDisable() {
         // Remove all Service Registrations
         getServer().getServicesManager().unregisterAll(this);
-        Bukkit.getScheduler().cancelTasks(this);
+        // Bukkit.getScheduler().cancelTasks(this);
     }
 
     @Override
@@ -117,43 +115,43 @@ public class Vault extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new VaultListener(), this);
         // Schedule to check the version every 30 minutes for an update. This is to update the most recent 
         // version so if an admin reconnects they will be warned about newer versions.
-        this.getServer().getScheduler().runTask(this, new Runnable() {
-
-            @Override
-            public void run() {
-                // Programmatically set the default permission value cause Bukkit doesn't handle plugin.yml properly for Load order STARTUP plugins
-                org.bukkit.permissions.Permission perm = getServer().getPluginManager().getPermission("vault.update");
-                if (perm == null)
-                {
-                    perm = new org.bukkit.permissions.Permission("vault.update");
-                    perm.setDefault(PermissionDefault.OP);
-                    plugin.getServer().getPluginManager().addPermission(perm);
-                }
-                perm.setDescription("Allows a user or the console to check for vault updates");
-
-                getServer().getScheduler().runTaskTimerAsynchronously(plugin, new Runnable() {
-
-                    @Override
-                    public void run() {
-                        if (getServer().getConsoleSender().hasPermission("vault.update") && getConfig().getBoolean("update-check", true)) {
-                            try {
-                            	log.info("Checking for Updates ... ");
-                                newVersion = updateCheck(currentVersion);
-                                if (newVersion > currentVersion) {
-                                    log.warning("Stable Version: " + newVersionTitle + " is out!" + " You are still running version: " + currentVersionTitle);
-                                    log.warning("Update at: https://dev.bukkit.org/projects/vault");
-                                } else if (currentVersion > newVersion) {
-                                    log.info("Stable Version: " + newVersionTitle + " | Current Version: " + currentVersionTitle);
-                                }
-                            } catch (Exception e) {
-                                // ignore exceptions
-                            }
-                        }
-                    }
-                }, 0, 432000);
-
-            }
-        });
+//        this.getServer().getScheduler().runTask(this, new Runnable() {
+//
+//            @Override
+//            public void run() {
+//                // Programmatically set the default permission value cause Bukkit doesn't handle plugin.yml properly for Load order STARTUP plugins
+//                org.bukkit.permissions.Permission perm = getServer().getPluginManager().getPermission("vault.update");
+//                if (perm == null)
+//                {
+//                    perm = new org.bukkit.permissions.Permission("vault.update");
+//                    perm.setDefault(PermissionDefault.OP);
+//                    plugin.getServer().getPluginManager().addPermission(perm);
+//                }
+//                perm.setDescription("Allows a user or the console to check for vault updates");
+//
+//                getServer().getScheduler().runTaskTimerAsynchronously(plugin, new Runnable() {
+//
+//                    @Override
+//                    public void run() {
+//                        if (getServer().getConsoleSender().hasPermission("vault.update") && getConfig().getBoolean("update-check", true)) {
+//                            try {
+//                            	log.info("Checking for Updates ... ");
+//                                newVersion = updateCheck(currentVersion);
+//                                if (newVersion > currentVersion) {
+//                                    log.warning("Stable Version: " + newVersionTitle + " is out!" + " You are still running version: " + currentVersionTitle);
+//                                    log.warning("Update at: https://dev.bukkit.org/projects/vault");
+//                                } else if (currentVersion > newVersion) {
+//                                    log.info("Stable Version: " + newVersionTitle + " | Current Version: " + currentVersionTitle);
+//                                }
+//                            } catch (Exception e) {
+//                                // ignore exceptions
+//                            }
+//                        }
+//                    }
+//                }, 0, 432000);
+//
+//            }
+//        });
 
         // Load up the Plugin metrics
         Metrics metrics = new Metrics(this, 887);
